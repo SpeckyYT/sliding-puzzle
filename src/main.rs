@@ -58,7 +58,7 @@ impl SlidingPuzzle {
         self.field == self.give_sorted()
     }
     fn give_sorted(&self) -> Field {
-        let mut field = vec![vec![0; self.width]; self.height];
+        let mut field = vec![vec![0; self.height]; self.width];
         for (x, x_line) in field.iter_mut().enumerate() {
             for (y, item) in x_line.iter_mut().enumerate() {
                 *item = x + y * self.width + 1;
@@ -99,6 +99,7 @@ impl SlidingPuzzle {
         
         let mut flat: Vec<_> = self.field.iter().flatten().copied().collect();
 
+        // this code got kindly stolen from kr8gz
         for i in 0..flat.len() {
             loop {
                 let found = flat[i];
@@ -116,20 +117,37 @@ impl SlidingPuzzle {
         let blank_parity = (blank_offset_x + blank_offset_y) % 2;
         let swaps_parity = swaps % 2;
 
-        if self.width <= 3 || self.height <= 3 {
-            blank_parity != swaps_parity
-        } else {
+        // parity is wack
+
+        // 2x2: !=
+        // 2x3: !=
+        // 2x4: ==
+        // 2x5: ==
+        // 2x6: !=
+        // 2x7: !=
+        // 2x8: ==
+
+        // 3x3: !=
+        // 3x4: ==
+        // 3x5: ==
+        // 3x6: !=
+        // 3x7: !=
+        // 3x8: ==
+
+        if self.width >= 4 || self.height >= 4 {
             blank_parity == swaps_parity
+        } else {
+            blank_parity != swaps_parity
         }
     }
     fn swap(&mut self, x1: usize, y1: usize, x2: usize, y2: usize) {
         swap!(self.field[x1][y1], self.field[x2][y2]);
     }
     fn index_blank(&self) -> (usize,usize) {
-        for (i,j) in self.field.iter().enumerate() {
-            for (k,l) in j.iter().enumerate() {
-                if *l == self.blank_value() {
-                    return (i,k);
+        for x in 0..self.width {
+            for y in 0..self.height {
+                if self.field[x][y] == self.blank_value() {
+                    return (x, y)
                 }
             }
         }
@@ -161,7 +179,7 @@ impl SlidingPuzzle {
                 }
             },
             1 => {
-                let log = (self.size() as f64 + 1.0).log10().ceil() as usize;
+                let log = ((self.size() - 1) as f64 + 1.0).log10().ceil() as usize;
                 for y in 0..self.height {
                     for x in 0..self.width {
                         let content = self.field[x][y];
@@ -193,7 +211,7 @@ impl SlidingPuzzle {
 
                 macro_rules! lazy_swap {
                     ($x:expr, $y:expr) => {
-                        if $y < self.width && $x < self.height {
+                        if $x < self.width && $y < self.height {
                             self.swap($x, $y, bx, by);
                             break;
                         }
@@ -207,7 +225,7 @@ impl SlidingPuzzle {
                         if by > 0 { lazy_swap!(bx,by-1) },
                     Left | Char('a') | Char('4') =>
                         if bx > 0 { lazy_swap!(bx-1,by) },
-                    Down | Char('s') | Char('5') =>
+                    Down | Char('s') | Char('5') | Char('2') =>
                         if by < self.height-1 { lazy_swap!(bx,by+1) },
                     Right | Char('d') | Char('6') =>
                         if bx < self.width-1 { lazy_swap!(bx+1,by) },
@@ -216,15 +234,13 @@ impl SlidingPuzzle {
             }
         }
 
-        if self.start_time.is_none() {
-            self.start_time = Some(Instant::now());
-        }
+        self.start_time.get_or_insert_with(Instant::now);
     }
     fn win(&self) {
         println!("{}", "Congratulations, you completed the puzzle!".green());
         
-        if self.start_time.is_some() {
-            println!("{}", format!("It took you {:.3?} to solve it", self.start_time.unwrap().elapsed()).dark_magenta());
+        if let Some(start_time) = self.start_time {
+            println!("{}", format!("It took you {:.3?} to solve it", start_time.elapsed()).dark_magenta());
         }
         
         exit();
@@ -277,8 +293,10 @@ fn ask_for_size(message: &str, size_type: SizeInput) -> usize {
         });
 
         match input.trim().parse::<usize>() {
-            Ok(number) if number <= 1 => println!("{}", "Number should be greater than 1".on_red()),
-            Ok(number) if size.is_ok() && number > size.unwrap().into() => println!("{}", "That's bigger than your terminal window".on_red()),
+            Ok(number) if number <= 1 =>
+                println!("{}", "Number should be greater than 1".on_red()),
+            Ok(number) if size.is_ok_and(|size| number > size.into()) =>
+                println!("{}", "That's bigger than your terminal window".on_red()),
             Ok(number) => return number,
             Err(_) => println!("{}", "Input should be a number".on_red()),
         }

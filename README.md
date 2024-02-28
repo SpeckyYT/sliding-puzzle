@@ -5,7 +5,7 @@ A Sliding Puzzle written in Rust for terminal.
 ## Features
 
 - [x] A board of any size
-  - [ ] Selectable at runtime
+  - [x] Selectable at runtime
 - [x] Multiple grid drawing styles
   - [ ] Selectable at runtime
 - [x] Field shuffler
