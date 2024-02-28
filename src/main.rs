@@ -1,55 +1,139 @@
-use std::{ ops::RangeInclusive, process };
-use rand::{ thread_rng, Rng };
+use std::{
+    io::{self, Write},
+    process,
+    time::Instant,
+};
+use rand::{
+    thread_rng,
+    Rng,
+    seq::SliceRandom,
+    rngs::mock::StepRng,
+    random,
+};
 use crossterm::{
-    event::{ read, Event, KeyCode }, style::Stylize,
+    event::{ read, Event, KeyCode, KeyEvent, KeyEventKind }, style::Stylize, terminal::size
 };
 
-const WIDTH:usize = 4;
-const HEIGHT:usize = 4;
+type Field = Vec<Vec<usize>>;
 
-const DRAW_STYLE:usize = 1; // 0 = ugly, 1 = pretty
+const DRAW_STYLE: usize = 1; // 0 = ugly, 1 = pretty
+const CLEAR_TERMINAL: bool = true;
 
-const SIZE:usize = WIDTH * HEIGHT;
-const BLANK_VALUE:usize = SIZE;
-const FIELD_SORTED_RANGE:RangeInclusive<usize> = 1..=SIZE;
+macro_rules! swap {
+    ($a:expr, $b:expr) => {
+        {
+            ($a, $b) = ($b, $a);
+        }
+    };
+}
 
+#[derive(Clone)]
 struct SlidingPuzzle {
-    field: [usize; SIZE],
+    field: Field,
+    width: usize,
+    height: usize,
+    start_time: Option<Instant>,
 }
 
 impl SlidingPuzzle {
-    fn is_sorted(&self) -> bool {
-        self.field[..] == SlidingPuzzle::give_sorted()[..]
+    fn new(width: usize, height: usize) -> SlidingPuzzle {
+        let mut game = SlidingPuzzle {
+            field: vec![vec![0; height]; width],
+            width,
+            height,
+            start_time: None,
+        };
+
+        game.field = game.give_sorted();
+
+        game
     }
-    fn give_sorted() -> [usize; SIZE] {
-        return FIELD_SORTED_RANGE.collect::<Vec<_>>().try_into().unwrap()
+    fn size(&self) -> usize {
+        self.width * self.height
+    }
+    fn blank_value(&self) -> usize {
+        self.size()
+    }
+    fn is_sorted(&self) -> bool {
+        self.field == self.give_sorted()
+    }
+    fn give_sorted(&self) -> Field {
+        let mut field = vec![vec![0; self.width]; self.height];
+        for (x, x_line) in field.iter_mut().enumerate() {
+            for (y, item) in x_line.iter_mut().enumerate() {
+                *item = x + y * self.width + 1;
+            }
+        }
+        field
     }
     fn shuffle(&mut self) {
-        for _ in 0..(2 * (WIDTH.pow(2) + HEIGHT.pow(2))) {
-            self.shuffle_once();
-        }
-    
-        for i in 1..usize::MAX {
-            let (x,y) = index_to_position(self.index_blank());
-            if (WIDTH-1 - x + HEIGHT-1 - y) % 2 == (i % 2) {
-                self.shuffle_once();
-            } else { break }
+        let mut flat: Vec<usize> = self.field.iter().flatten().copied().collect();
+        let mut flat_mut: Vec<&mut usize> = self.field.iter_mut().flatten().collect();
+        let mut rng = StepRng::new(random(), random());
+
+        flat.shuffle(&mut rng);
+        flat.into_iter()
+            .enumerate()
+            .for_each(|(i, v)| *flat_mut[i] = v);
+
+        loop {
+            if self.is_sorted() {
+                self.shuffle();
+            }
+
+            match self.is_valid_field() {
+                true => break,
+                false => self.shuffle_once(),
+            }
         }
     }
     fn shuffle_once(&mut self) {
-        let mut a: usize = 0;
-        let mut b: usize = 0;
-        while a == b {
-            a = thread_rng().gen_range(0..SIZE);
-            b = thread_rng().gen_range(0..SIZE);
+        let x1 = thread_rng().gen_range(0..self.width);
+        let x2 = (x1 + thread_rng().gen_range(1..self.width)) % self.width;
+        let y1 = thread_rng().gen_range(0..self.height);
+        let y2 = (y1 + thread_rng().gen_range(1..self.height)) % self.height;
+        self.swap(x1, y1, x2, y2);
+    }
+    fn is_valid_field(&self) -> bool {
+        let mut swaps = 0;
+        
+        let mut flat: Vec<_> = self.field.iter().flatten().copied().collect();
+
+        for i in 0..flat.len() {
+            loop {
+                let found = flat[i];
+                if found == i + 1 { break }
+                flat.swap(i, found - 1);
+                swaps += 1;
+            }
         }
-        self.field.swap(a,b);
+
+        let (x, y) = self.index_blank();
+
+        let blank_offset_x = self.width - x - 1;
+        let blank_offset_y = self.height - y - 1;
+
+        let blank_parity = (blank_offset_x + blank_offset_y) % 2;
+        let swaps_parity = swaps % 2;
+
+        if self.width <= 3 || self.height <= 3 {
+            blank_parity != swaps_parity
+        } else {
+            blank_parity == swaps_parity
+        }
     }
-    fn index_value(&self, number: usize) -> usize {
-        self.field.iter().position(|a| *a == number).unwrap()
+    fn swap(&mut self, x1: usize, y1: usize, x2: usize, y2: usize) {
+        swap!(self.field[x1][y1], self.field[x2][y2]);
     }
-    fn index_blank(&self) -> usize {
-        self.index_value(BLANK_VALUE)
+    fn index_blank(&self) -> (usize,usize) {
+        for (i,j) in self.field.iter().enumerate() {
+            for (k,l) in j.iter().enumerate() {
+                if *l == self.blank_value() {
+                    return (i,k);
+                }
+            }
+        }
+        (0,0)
     }
     fn how_to_play(&self) {
         println!("{}", "Welcome to the Sliding-Puzzle!".cyan());
@@ -58,30 +142,30 @@ impl SlidingPuzzle {
     fn objective(&self) {
         println!("{}", "The objective is to get all numbers in sequence horizontally.".yellow());
         println!("{}", "Just like the example here below:".red());
-        SlidingPuzzle::draw_field(&mut SlidingPuzzle::give_sorted());
+        SlidingPuzzle::new(self.width, self.height).draw();
     }
     fn draw(&self) {
         match DRAW_STYLE {
             0 => {
-                for y in 0..HEIGHT {
-                    for x in 0..WIDTH {
-                        let content = self.field[position_to_index((x,y)) as usize];
-                        if content == BLANK_VALUE {
+                for y in 0..self.height {
+                    for x in 0..self.width {
+                        let content = self.field[x][y];
+                        if content == self.size() - 1 {
                             print!("    ");
                         } else {
                             print!(" {: <3}", content);
                         }
-                        if x < WIDTH-1 { print!("|") }
+                        if x < self.width-1 { print!("|") }
                     }
-                    if y < HEIGHT-1 { print!("\n") }
+                    println!()
                 }
             },
             1 => {
-                let log = (SIZE as f64).log10().ceil() as usize;
-                for y in 0..HEIGHT {
-                    for x in 0..WIDTH {
-                        let content = self.field[position_to_index((x,y)) as usize];
-                        if content == BLANK_VALUE {
+                let log = (self.size() as f64 + 1.0).log10().ceil() as usize;
+                for y in 0..self.height {
+                    for x in 0..self.width {
+                        let content = self.field[x][y];
+                        if content == self.blank_value() {
                             print!("{}", " ".repeat(log));
                         } else {
                             let stringified = format!("{:log$}", content);
@@ -96,66 +180,64 @@ impl SlidingPuzzle {
                         }
                     }
                     print!("{}", (160 as char).reset()); // fixes window rescaling ansi bug
-                    print!("\n");
+                    println!();
                 }
             },
             _ => println!("{}", "Invalid Drawing Style".on_red()),
         }
     }
-    fn draw_field(field: &mut [usize; SIZE]) {
-        SlidingPuzzle {
-            field: *field,
-        }.draw();
-    }
     fn player_move(&mut self) {
-        let mut moved = false;
-        while !moved {
-            if let Event::Key(event) = read().unwrap() {
-                let blank_index = self.index_blank();
-                let blank_position = index_to_position(blank_index);
-                let (x, y) = blank_position;
-    
-                let mut lazy_swap = |x:usize, y:usize| {
-                    self.field.swap(
-                        blank_index,
-                        position_to_index((x,y))
-                    );
-                    moved = true;
-                };
-    
-                match event.code {
-                    KeyCode::Up |
-                    KeyCode::Char('w') |
-                    KeyCode::Char('8') =>
-                        if y > 0 { lazy_swap(x,y-1) },
-                    KeyCode::Left |
-                    KeyCode::Char('a') |
-                    KeyCode::Char('4') =>
-                        if x > 0 { lazy_swap(x-1,y) },
-                    KeyCode::Down |
-                    KeyCode::Char('s') |
-                    KeyCode::Char('5') =>
-                        if y < HEIGHT-1 { lazy_swap(x,y+1) },
-                    KeyCode::Right |
-                    KeyCode::Char('d') |
-                    KeyCode::Char('6') =>
-                        if x < WIDTH-1 { lazy_swap(x+1,y) },
+        loop {
+            if let Event::Key(KeyEvent { code, kind: KeyEventKind::Press|KeyEventKind::Repeat, .. }) = read().unwrap() {
+                let (bx, by) = self.index_blank();
+
+                macro_rules! lazy_swap {
+                    ($x:expr, $y:expr) => {
+                        if $y < self.width && $x < self.height {
+                            self.swap($x, $y, bx, by);
+                            break;
+                        }
+                    }
+                }
+                
+                use KeyCode::*;
+
+                match code {
+                    Up | Char('w') | Char('8') =>
+                        if by > 0 { lazy_swap!(bx,by-1) },
+                    Left | Char('a') | Char('4') =>
+                        if bx > 0 { lazy_swap!(bx-1,by) },
+                    Down | Char('s') | Char('5') =>
+                        if by < self.height-1 { lazy_swap!(bx,by+1) },
+                    Right | Char('d') | Char('6') =>
+                        if bx < self.width-1 { lazy_swap!(bx+1,by) },
                     _ => (),
                 }
             }
         }
+
+        if self.start_time.is_none() {
+            self.start_time = Some(Instant::now());
+        }
+    }
+    fn win(&self) {
+        println!("{}", "Congratulations, you completed the puzzle!".green());
+        
+        if self.start_time.is_some() {
+            println!("{}", format!("It took you {:.3?} to solve it", self.start_time.unwrap().elapsed()).dark_magenta());
+        }
+        
+        exit();
     }
 }
 
 fn main() {
-    if WIDTH < 2 || HEIGHT < 2 {
-        println!("{}", "Invalid Field Size".on_red());
-        exit();
-    }
+    clear_terminal();
 
-    let mut game = SlidingPuzzle {
-        field: SlidingPuzzle::give_sorted(),
-    };
+    let width = ask_for_size("Input width:", SizeInput::Width);
+    let height = ask_for_size("Input height:", SizeInput::Height);
+
+    let mut game = SlidingPuzzle::new(width, height);
 
     game.shuffle();
 
@@ -170,23 +252,59 @@ fn main() {
         game.draw();
     }
 
-    win();
+    game.win();
 }
 
-fn index_to_position(index: usize) -> (usize, usize) { (index % WIDTH, index / WIDTH) }
-fn position_to_index(position: (usize, usize)) -> usize { position.0 + position.1 * WIDTH }
-
-fn win() {
-    println!("{}", "Congratulations, you completed the puzzle!".green());
-    exit();
+enum SizeInput {
+    Width,
+    Height,
 }
 
+fn ask_for_size(message: &str, size_type: SizeInput) -> usize {
+    loop {
+        print!("{} ", message);
+        flush();
+
+        let mut input = String::new();
+        io::stdin().read_line(&mut input).unwrap();
+
+        clear_terminal();
+        flush();
+
+        let size = size().map(|(w,h)| match size_type {
+            SizeInput::Width => w,
+            SizeInput::Height => h,
+        });
+
+        match input.trim().parse::<usize>() {
+            Ok(number) if number <= 1 => println!("{}", "Number should be greater than 1".on_red()),
+            Ok(number) if size.is_ok() && number > size.unwrap().into() => println!("{}", "That's bigger than your terminal window".on_red()),
+            Ok(number) => return number,
+            Err(_) => println!("{}", "Input should be a number".on_red()),
+        }
+    }
+}
+
+#[inline]
+fn flush() {
+    io::stdout().flush().unwrap();
+}
+
+#[inline]
 fn exit() {
     println!("{}", "Press any key 3 times to close...".dark_cyan());
-    for _ in 0..3 { read().unwrap(); }
+    let mut count: u8 = 3;
+    while count > 0 {
+        if let Event::Key(KeyEvent { kind: KeyEventKind::Press, .. }) = read().unwrap() {
+            count -= 1
+        }
+    }
     process::exit(0);
 }
 
+#[inline]
 fn clear_terminal() {
-    print!("{esc}[2J{esc}[1;1H", esc = 27 as char); // https://stackoverflow.com/questions/34837011/how-to-clear-the-terminal-screen-in-rust-after-a-new-line-is-printed
+    if CLEAR_TERMINAL {
+        print!("{esc}[2J{esc}[1;1H", esc = 27 as char); // https://stackoverflow.com/questions/34837011/how-to-clear-the-terminal-screen-in-rust-after-a-new-line-is-printed
+    }
 }
