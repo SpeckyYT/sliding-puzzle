@@ -1,24 +1,26 @@
 use crossterm::style::Stylize;
 
-use crate::{util::exit, SlidingPuzzle, DRAW_STYLE};
+use crate::{util::{exit, flush}, SlidingPuzzle, DRAW_STYLE};
 
 impl SlidingPuzzle {
     pub fn how_to_play(&self) {
-        println!("{}", "Welcome to the Sliding-Puzzle!".cyan());
-        println!("{}", "Move the blank square around with WASD, Arrow Keys or Numpad (8456).".magenta());
+        print!("{}\n", "Welcome to the Sliding-Puzzle!".cyan());
+        print!("{}\n", "Move the blank square around with WASD, Arrow Keys or Numpad (8456).".magenta());
     }
     pub fn objective(&self) {
-        println!("{}", "The objective is to get all numbers in sequence horizontally.".yellow());
-        println!("{}", "Just like the example here below:".red());
+        print!("{}\n", "The objective is to get all numbers in sequence horizontally.".yellow());
+        print!("{}\n", "Just like the example here below:".red());
         SlidingPuzzle::new(self.width, self.height).draw();
     }
     pub fn win(&self) {
-        println!("{}", "Congratulations, you completed the puzzle!".green());
+        print!("{}\n", "Congratulations, you completed the puzzle!".green());
         
         if let Some(start_time) = self.start_time {
-            println!("{}", format!("It took you {:.3?} to solve it", start_time.elapsed()).dark_magenta());
+            print!("{}\n", format!("It took you {:.3?} to solve it", start_time.elapsed()).dark_magenta());
         }
         
+        flush();
+
         exit();
     }
     pub fn draw(&self) {
@@ -34,7 +36,7 @@ impl SlidingPuzzle {
                         }
                         if x < self.width-1 { print!("|") }
                     }
-                    println!()
+                    print!("\n");
                 }
             },
             1 => {
@@ -56,11 +58,10 @@ impl SlidingPuzzle {
                             )
                         }
                     }
-                    print!("{}", (160 as char).reset()); // fixes window rescaling ansi bug
-                    println!();
+                    print!("{}\n", (160 as char).reset()); // fixes window rescaling ansi bug
                 }
             },
-            _ => println!("{}", "Invalid Drawing Style".on_red()),
+            _ => print!("{}\n", "Invalid Drawing Style".on_red()),
         }
     }
 }

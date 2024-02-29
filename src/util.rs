@@ -57,11 +57,11 @@ pub fn ask_for_size(message: &str, size_type: SizeInput) -> usize {
 
         match input.trim().parse::<usize>() {
             Ok(number) if number <= 1 =>
-                println!("{}", "Number should be greater than 1".on_red()),
+                print!("{}\n", "Number should be greater than 1".on_red()),
             Ok(number) if size.is_ok_and(|size| number > size.into()) =>
-                println!("{}", "That's bigger than your terminal window".on_red()),
+                print!("{}\n", "That's bigger than your terminal window".on_red()),
             Ok(number) => return number,
-            Err(_) => println!("{}", "Input should be a number".on_red()),
+            Err(_) => print!("{}\n", "Input should be a number".on_red()),
         }
     }
 }
@@ -73,7 +73,8 @@ pub fn flush() {
 
 #[inline]
 pub fn exit() {
-    println!("{}", "Press any key 3 times to close...".dark_cyan());
+    print!("{}\n", "Press any key 3 times to close...".dark_cyan());
+    flush();
     let mut count: u8 = 3;
     while count > 0 {
         if let Event::Key(KeyEvent { kind: KeyEventKind::Press, .. }) = read().unwrap() {

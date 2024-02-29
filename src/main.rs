@@ -9,7 +9,7 @@ pub const CLEAR_TERMINAL: bool = true;
 type Field = Vec<Vec<usize>>;
 
 use std::time::Instant;
-use util::{ask_for_size, clear_terminal, SizeInput};
+use util::{ask_for_size, clear_terminal, flush, SizeInput};
 
 #[derive(Clone)]
 struct SlidingPuzzle {
@@ -35,8 +35,6 @@ impl SlidingPuzzle {
 }
 
 fn main() {
-    clear_terminal();
-
     let width = ask_for_size("Input width:", SizeInput::Width);
     let height = ask_for_size("Input height:", SizeInput::Height);
 
@@ -45,14 +43,17 @@ fn main() {
     game.shuffle();
 
     clear_terminal();
+    flush();
     game.draw();
     game.how_to_play();
     game.objective();
+    flush();
 
     while !game.is_sorted() {
         game.player_move();
         clear_terminal();
         game.draw();
+        flush();
     }
 
     game.win();
