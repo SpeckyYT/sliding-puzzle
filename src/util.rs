@@ -84,6 +84,11 @@ pub fn flush() {
 }
 
 #[inline]
+pub fn cmd_fix() {
+    put("".red().to_string());
+}
+
+#[inline]
 pub fn exit() {
     put(format!("{}\n", "Press any key 3 times to close...".dark_cyan()));
     flush();

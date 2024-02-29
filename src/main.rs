@@ -9,7 +9,7 @@ pub const CLEAR_TERMINAL: bool = true;
 type Field = Vec<Vec<usize>>;
 
 use std::time::Instant;
-use util::{ask_for_size, clear_terminal, flush, SizeInput};
+use util::{ask_for_size, clear_terminal, flush, cmd_fix, SizeInput};
 
 #[derive(Clone)]
 struct SlidingPuzzle {
@@ -35,7 +35,7 @@ impl SlidingPuzzle {
 }
 
 fn main() {
-    flush();
+    cmd_fix();
     clear_terminal();
     flush();
 
