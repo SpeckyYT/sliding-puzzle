@@ -1,8 +1,11 @@
-use std::{io::{self, Write}, process};
+use std::{io::{self, Write}, process, sync::{Arc, Mutex}};
 
 use crossterm::{event::{read, Event, KeyEvent, KeyEventKind}, style::Stylize, terminal::size};
+use once_cell::sync::Lazy;
 
 use crate::{SlidingPuzzle, CLEAR_TERMINAL};
+
+pub static PUT_STRING: Lazy<Arc<Mutex<String>>> = Lazy::new(|| Arc::new(Mutex::new(String::new())));
 
 macro_rules! swap {
     ($a:expr, $b:expr) => {
@@ -41,7 +44,7 @@ pub enum SizeInput {
 
 pub fn ask_for_size(message: &str, size_type: SizeInput) -> usize {
     loop {
-        print!("{} ", message);
+        put(format!("{} ", message));
         flush();
 
         let mut input = String::new();
@@ -57,23 +60,32 @@ pub fn ask_for_size(message: &str, size_type: SizeInput) -> usize {
 
         match input.trim().parse::<usize>() {
             Ok(number) if number <= 1 =>
-                print!("{}\n", "Number should be greater than 1".on_red()),
+                put(format!("{}\n", "Number should be greater than 1".on_red())),
             Ok(number) if size.is_ok_and(|size| number > size.into()) =>
-                print!("{}\n", "That's bigger than your terminal window".on_red()),
+                put(format!("{}\n", "That's bigger than your terminal window".on_red())),
             Ok(number) => return number,
-            Err(_) => print!("{}\n", "Input should be a number".on_red()),
+            Err(_) => put(format!("{}\n", "Input should be a number".on_red())),
         }
     }
 }
 
 #[inline]
+pub fn put<S: AsRef<str>>(string: S) {
+    PUT_STRING.lock().unwrap().push_str(string.as_ref());
+}
+
+#[inline]
 pub fn flush() {
+    let mut put_string = PUT_STRING.lock().unwrap();
+    let mut stdout = io::stdout();
+    stdout.write(put_string.as_bytes()).unwrap();
+    *put_string = String::new();
     io::stdout().flush().unwrap();
 }
 
 #[inline]
 pub fn exit() {
-    print!("{}\n", "Press any key 3 times to close...".dark_cyan());
+    put(format!("{}\n", "Press any key 3 times to close...".dark_cyan()));
     flush();
     let mut count: u8 = 3;
     while count > 0 {
@@ -87,6 +99,6 @@ pub fn exit() {
 #[inline]
 pub fn clear_terminal() {
     if CLEAR_TERMINAL {
-        print!("{esc}[2J{esc}[1;1H", esc = 27 as char); // https://stackoverflow.com/questions/34837011/how-to-clear-the-terminal-screen-in-rust-after-a-new-line-is-printed
+        put(format!("{esc}[2J{esc}[1;1H", esc = 27 as char)); // https://stackoverflow.com/questions/34837011/how-to-clear-the-terminal-screen-in-rust-after-a-new-line-is-printed
     }
 }

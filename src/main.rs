@@ -35,6 +35,10 @@ impl SlidingPuzzle {
 }
 
 fn main() {
+    flush();
+    clear_terminal();
+    flush();
+
     let width = ask_for_size("Input width:", SizeInput::Width);
     let height = ask_for_size("Input height:", SizeInput::Height);
 
