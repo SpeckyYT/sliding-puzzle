@@ -37,10 +37,11 @@ impl SlidingPuzzle {
         }
     }
     pub fn shuffle_once(&mut self) {
-        let x1 = thread_rng().gen_range(0..self.width);
-        let x2 = (x1 + thread_rng().gen_range(1..self.width)) % self.width;
-        let y1 = thread_rng().gen_range(0..self.height);
-        let y2 = (y1 + thread_rng().gen_range(1..self.height)) % self.height;
+        let mut rng = thread_rng();
+        let x1 = rng.gen_range(0..self.width);
+        let x2 = (x1 + rng.gen_range(1..self.width)) % self.width;
+        let y1 = rng.gen_range(0..self.height);
+        let y2 = (y1 + rng.gen_range(1..self.height)) % self.height;
         self.swap(x1, y1, x2, y2);
     }
     pub fn is_valid_field(&self) -> bool {
@@ -83,10 +84,17 @@ impl SlidingPuzzle {
         // 3x7: !=
         // 3x8: ==
 
-        if self.width >= 4 || self.height >= 4 {
-            blank_parity == swaps_parity
+        let min = self.width.min(self.height);
+        let max = self.width.max(self.height);
+
+        if min < 4 {
+            match max % 4 {
+                0|1 => blank_parity == swaps_parity,
+                2|3 => blank_parity != swaps_parity,
+                _ => unreachable!(),
+            }
         } else {
-            blank_parity != swaps_parity
+            blank_parity == swaps_parity
         }
     }
 }
