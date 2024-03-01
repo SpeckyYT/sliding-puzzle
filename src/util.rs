@@ -78,7 +78,7 @@ pub fn put<S: AsRef<str>>(string: S) {
 pub fn flush() {
     let mut put_string = PUT_STRING.lock().unwrap();
     let mut stdout = io::stdout();
-    stdout.write(put_string.as_bytes()).unwrap();
+    stdout.write_all(put_string.as_bytes()).unwrap();
     *put_string = String::new();
     io::stdout().flush().unwrap();
 }

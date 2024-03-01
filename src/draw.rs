@@ -26,13 +26,13 @@ impl SlidingPuzzle {
                     for x in 0..self.width {
                         let content = self.field[x][y];
                         if content == self.size() - 1 {
-                            put(format!("    "));
+                            put("    ");
                         } else {
                             put(format!(" {: <3}", content));
                         }
-                        if x < self.width-1 { put(format!("|")) }
+                        if x < self.width-1 { put("|") }
                     }
-                    put(format!("\n"));
+                    put("\n");
                 }
             },
             1 => {
@@ -41,7 +41,7 @@ impl SlidingPuzzle {
                     for x in 0..self.width {
                         let content = self.field[x][y];
                         if content == self.blank_value() {
-                            put(format!("{}", " ".repeat(log)));
+                            put(" ".repeat(log));
                         } else {
                             let stringified = format!("{:log$}", content);
                             put(format!(
