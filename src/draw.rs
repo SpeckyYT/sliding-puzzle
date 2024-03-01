@@ -1,6 +1,6 @@
 use crossterm::style::Stylize;
 
-use crate::{util::{exit, flush, put}, SlidingPuzzle, DRAW_STYLE};
+use crate::{util::put, SlidingPuzzle, DRAW_STYLE};
 
 impl SlidingPuzzle {
     pub fn how_to_play(&self) {
@@ -18,10 +18,6 @@ impl SlidingPuzzle {
         if let Some(start_time) = self.start_time {
             put(format!("{}\n", format!("It took you {:.3?} to solve it", start_time.elapsed()).dark_magenta()));
         }
-        
-        flush();
-
-        exit();
     }
     pub fn draw(&self) {
         match DRAW_STYLE {

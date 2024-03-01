@@ -89,7 +89,7 @@ pub fn cmd_fix() {
 }
 
 #[inline]
-pub fn exit() {
+pub fn exit() -> ! {
     put(format!("{}\n", "Press any key 3 times to close...".dark_cyan()));
     flush();
     let mut count: u8 = 3;

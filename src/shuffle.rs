@@ -66,35 +66,21 @@ impl SlidingPuzzle {
 
         let blank_parity = (blank_offset_x + blank_offset_y) % 2;
         let swaps_parity = swaps % 2;
+        let parity = blank_parity == swaps_parity;
 
         // parity is wack
 
-        // 2x2: !=
-        // 2x3: !=
-        // 2x4: ==
-        // 2x5: ==
-        // 2x6: !=
-        // 2x7: !=
-        // 2x8: ==
-
-        // 3x3: !=
-        // 3x4: ==
-        // 3x5: ==
-        // 3x6: !=
-        // 3x7: !=
-        // 3x8: ==
+        // min(<=3) & max(<=3): !parity
+        // min(<=3): max(>=4) % 4 in [0, 1] ? parity : !parity
+        // min(>=4) & max(>=4): parity
 
         let min = self.width.min(self.height);
         let max = self.width.max(self.height);
 
-        if min < 4 {
-            match max % 4 {
-                0|1 => blank_parity == swaps_parity,
-                2|3 => blank_parity != swaps_parity,
-                _ => unreachable!(),
-            }
-        } else {
-            blank_parity == swaps_parity
+        match (min, max) {
+            (0..=3, 0..=3) => !parity,
+            (0..=3, 4..) => parity == (max % 4 < 2),
+            _ => parity,
         }
     }
 }
