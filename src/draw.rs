@@ -18,6 +18,7 @@ impl SlidingPuzzle {
         if let Some(start_time) = self.start_time {
             put(format!("{}\n", format!("It took you {:.3?} to solve it", start_time.elapsed()).dark_magenta()));
         }
+        put(format!("{}\n", format!("It took you {} moves to solve it", self.moves).yellow()));
     }
     pub fn draw(&self) {
         match DRAW_STYLE {

@@ -14,6 +14,7 @@ impl SlidingPuzzle {
                     ($x:expr, $y:expr) => {
                         if $x < self.width && $y < self.height {
                             self.swap($x, $y, bx, by);
+                            self.moves += 1;
                             break;
                         }
                     }
