@@ -11,6 +11,8 @@ type Field = Vec<Vec<usize>>;
 use std::time::Instant;
 use util::{ask_for_size, clear_terminal, cmd_fix, exit, flush, SizeInput};
 
+const BOT_PLAY: bool = true;
+
 #[derive(Clone)]
 struct SlidingPuzzle {
     field: Field,
@@ -53,13 +55,27 @@ fn main() {
     game.objective();
     flush();
 
+    let mut print_time = Instant::now();
+
     while !game.is_sorted() {
-        game.player_move();
-        clear_terminal();
-        game.draw();
-        flush();
+        if BOT_PLAY {
+            game.bot_random_move();
+            if print_time.elapsed() > Duration::from_millis(16) {
+                print_time = Instant::now();
+                clear_terminal();
+                game.draw();
+                flush();
+            }
+        } else {
+            game.player_move();
+            clear_terminal();
+            game.draw();
+            flush();
+        }
     }
 
+    clear_terminal();
+    game.draw();
     game.win();
     flush();
     exit();
