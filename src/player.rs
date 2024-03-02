@@ -22,9 +22,9 @@ impl SlidingPuzzle {
                 use KeyCode::*;
 
                 match code {
-                    Up | Char('w') | Char('8') =>
+                    Up | Char('w') | Char('8') | Char('z') => // azerty moment 💀
                         if by > 0 { lazy_swap!(bx,by-1) },
-                    Left | Char('a') | Char('4') =>
+                    Left | Char('a') | Char('4') | Char('q') => // azerty moment 💀
                         if bx > 0 { lazy_swap!(bx-1,by) },
                     Down | Char('s') | Char('5') | Char('2') =>
                         if by < self.height-1 { lazy_swap!(bx,by+1) },
