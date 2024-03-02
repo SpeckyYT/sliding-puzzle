@@ -26,11 +26,11 @@ impl SlidingPuzzle {
                 for y in 0..self.height {
                     for x in 0..self.width {
                         let content = self.field[x][y];
-                        if content == self.size() - 1 {
-                            put("    ");
+                        put(if content == self.size() - 1 {
+                            String::from("    ")
                         } else {
-                            put(format!(" {: <3}", content));
-                        }
+                            format!(" {: <3}", content)
+                        });
                         if x < self.width-1 { put("|") }
                     }
                     put("\n");
