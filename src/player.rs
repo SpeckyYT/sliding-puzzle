@@ -26,13 +26,13 @@ impl SlidingPuzzle {
                 use KeyCode::*;
 
                 match code {
-                    Up | Char('w') | Char('8') | Char('z') | Char(',') =>
+                    Up | Char('w' | 'z' | '8' | ',') =>
                         if by > 0 { lazy_swap!(bx,by-1) },
-                    Left | Char('a') | Char('4') | Char('q') =>
+                    Left | Char('a' | 'q' | '4') =>
                         if bx > 0 { lazy_swap!(bx-1,by) },
-                    Down | Char('s') | Char('5') | Char('2') | Char('o') =>
+                    Down | Char('s' | '5' | '2' | 'o') =>
                         if by < self.height-1 { lazy_swap!(bx,by+1) },
-                    Right | Char('d') | Char('6') | Char('e') =>
+                    Right | Char('d' | '6' | 'e') =>
                         if bx < self.width-1 { lazy_swap!(bx+1,by) },
                     _ => (),
                 }

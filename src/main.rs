@@ -8,7 +8,7 @@ pub const CLEAR_TERMINAL: bool = true;
 
 type Field = Vec<Vec<usize>>;
 
-use std::time::{Duration, Instant};
+use std::time::Instant;
 use util::{ask_for_size, clear_terminal, cmd_fix, exit, flush, SizeInput};
 
 #[derive(Clone)]
